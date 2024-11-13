@@ -46,6 +46,27 @@ reflections = {
     "you": "me",
     "me": "you"
 }
+def format_paragraphs(text, max_length=80):
+    """Format the text to ensure it wraps at a specified maximum length."""
+    words = text.split()
+    formatted_text = ""
+    current_line = ""
+
+    for word in words:
+        # Check if adding the next word would exceed the max length
+        if len(current_line) + len(word) + 1 > max_length:
+            formatted_text += current_line + "\n"  # Add the current line and a newline
+            current_line = word  # Start a new line with the current word
+        else:
+            if current_line:  # If current_line is not empty, add a space before the word
+                current_line += " "
+            current_line += word
+
+    # Add any remaining text in current_line
+    if current_line:
+        formatted_text += current_line
+
+    return formatted_text
 
 # Sentiment-based response function
 def respond_to_sentiment(user_input):
@@ -61,7 +82,7 @@ def respond_to_sentiment(user_input):
 def fetch_from_source(query):
     if "news" in query or "latest" in query:
         return fetch_news_article()
-    elif "explain" in query or "what is" in query or "who is" in query:
+    elif "explain" in query or "what is" in query or "who is" in query or "where is" in query:
         return fetch_wikipedia_summary(query)
     else:
         return "I'm not sure which source to use. Could you clarify your question?"
@@ -75,28 +96,43 @@ def fetch_news_article():
         soup = BeautifulSoup(response.text, 'html.parser')
         paragraphs = soup.find_all('p')
         text_content = ' '.join([para.get_text() for para in paragraphs])
+
+
+        # Format the content with line breaks
+        formatted_content = format_paragraphs(text_content, max_length=80)
         
         # Summarize if content is lengthy
 
         if len(text_content.split()) > 300:
             summary = summarizer(text_content, max_length=50, min_length=25, do_sample=False)
-            return summary[0]['summary_text']
+            return format_paragraphs(summary[0]['summary_text'], max_length=80)
         else:
-            return text_content
+            return formatted_content
     except requests.RequestException as e:
         return "I'm sorry, but I couldn't retrieve the news right now."
 
 # Fetch a Wikipedia summary based on the user's query
 def fetch_wikipedia_summary(query):
-    search_query = query.replace("explain", "").replace("what is", "").replace("who is","").strip()
-    url = f"https://en.wikipedia.org/wiki/{search_query.replace(' ', '_')}"
+    search_query = query.replace("explain", "").replace("what is", "").replace("who is","").replace("where is","").strip()
+    # Use the Wikipedia API to search for the page
+    search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={search_query}&format=json"
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        paragraphs = soup.find_all('p')
-        text_content = ' '.join([para.get_text() for para in paragraphs[:2]])  # First two paragraphs for summary
-        return text_content
+        search_response = requests.get(search_url)
+        search_response.raise_for_status()
+        search_results = search_response.json()
+        if search_results['query']['search']:
+            page_title = search_results['query']['search'][0]['title']
+            page_url = f"https://en.wikipedia.org/wiki/{page_title.replace(' ', '_')}"
+            page_response = requests.get(page_url)
+            page_response.raise_for_status()
+            soup = BeautifulSoup(page_response.text, 'html.parser')
+            paragraphs = soup.find_all('p')
+            text_content = ' '.join([para.get_text() for para in paragraphs[:2]])
+            formatted_content = format_paragraphs(text_content, max_length=80)
+            return formatted_content
+        else:
+            return "I couldn't find relevant information on Wikipedia for that query."
+
     except requests.RequestException:
         return "I couldn't find relevant information on Wikipedia for that query."
 
@@ -129,10 +165,10 @@ chatbot = Chat(patterns, reflections)
 print("Welcome to Querin 2.0! Type 'quit' to exit.")
 
 while True:
-    user_input = input("You: ").lower()
+    user_input = input("You: ")
 
     # Exit condition
-    if user_input == 'quit':
+    if user_input.lower() in ["quit", "exit", "bye"]:
         print("Querin 2.0: Goodbye! Take care.")
         break
 

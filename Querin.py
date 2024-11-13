@@ -3,9 +3,11 @@ import warnings
 import nltk
 import requests
 import feedparser
+import time
+import sys
 from bs4 import BeautifulSoup
 from nltk.stem import WordNetLemmatizer
-from nltk.chat.util import Chat
+from nltk.chat.util import Chat, reflections
 from textblob import TextBlob
 from transformers import pipeline
 from colorama import Fore, Style
@@ -161,26 +163,39 @@ def is_query(user_input):
 # Initialize Chat object
 chatbot = Chat(patterns, reflections)
 
+def slow_typing(text, delay=0.02):
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    print()
+
 # Main conversation loop
 print("Welcome to Querin 2.0! Type 'quit' to exit.")
 
 while True:
     user_input = input(f"{Style.BRIGHT}{Fore.GREEN}You: {Style.RESET_ALL}")
 
-    # Exit condition
+    # Exit condition    
     if user_input.lower() in ["quit", "exit", "bye"]:
-        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0: {Style.RESET_ALL}Goodbye! Take care. See you later, alligator!")
+        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0: {Style.RESET_ALL}", end="")
+        slow_typing("Goodbye! Take care. See you later, alligator!", delay=0.03)
         break
 
     # Check for predefined patterns
     pattern_response = chatbot.respond(user_input)
 
     if pattern_response:
-        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", pattern_response)
+        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", end=" ")  
+    
+        # Apply slow typing only to the response
+        slow_typing(pattern_response, delay=0.03)
 
     elif is_query(user_input):
-        print(f"{Style.BRIGHT}{Fore.YELLOW}Querin 2.0:{Style.RESET_ALL}", resource_response_enhanced(user_input))
+        print(f"{Style.BRIGHT}{Fore.YELLOW}Querin 2.0:{Style.RESET_ALL}", end=" ")
+        slow_typing((resource_response_enhanced(user_input)), delay=0.01)
 
     else:
-        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", respond_to_sentiment(user_input))
+        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", end=" ")
+        slow_typing((respond_to_sentiment(user_input)), delay=0.03)
 

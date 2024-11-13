@@ -2,11 +2,13 @@ import string
 import warnings
 import nltk
 import requests
+import feedparser
 from bs4 import BeautifulSoup
 from nltk.stem import WordNetLemmatizer
 from nltk.chat.util import Chat
 from textblob import TextBlob
 from transformers import pipeline
+from colorama import Fore, Style
 
 warnings.filterwarnings('ignore')
 
@@ -16,6 +18,7 @@ summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 # Define patterns for the chatbot
 patterns = [
     [r"my name is (.*)", ["Hello %1, nice to meet you!"]],
+    [r"thank you|thanks|thx|appreciate it", ["You're welcome!"]],
     [r"hi|hello|hey", ["Hello!", "Hi there!", "Hey!"]],
     [r"how are you(.*)", ["I'm Querin 2.0, but I'm doing great! How about you?"]],
     [r"what is your name?", ["I am a chatbot designed by Querin Corporation. What's yours?"]],
@@ -24,8 +27,10 @@ patterns = [
     [r"do you like (.*)?", ["I don't have preferences, but I think %1 sounds interesting!"]],
     [r"who (.*) created you?",
      ["I was created by programmers from Querin Corporation", "I was made by tech enthusiasts!"]],
-    [r"(.*) (movie|book|song) recommendations?",
-     ["I recommend 'Inception' for movies!", "Try '1984' by George Orwell if you like books."]]
+    [r"(.*) movie recommendations?",
+     ["I recommend 'Inception' for movies!"]], 
+    [r"(.*) book recommendations?", ["Try '1984' by George Orwell if you like books."]], 
+    [r"(.*) song recommendations?", ["Listen APT. by Rose & Bruno Mars"]]
 ]
 
 # Reflections for natural language adjustments
@@ -88,27 +93,20 @@ def fetch_from_source(query):
         return "I'm not sure which source to use. Could you clarify your question?"
 
 # Fetch latest news article
-# Fetch latest news article
 def fetch_news_article():
-    url = 'https://www.bbc.com/news'
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        paragraphs = soup.find_all('p')
-        text_content = ' '.join([para.get_text() for para in paragraphs])
+    feed_url = 'http://feeds.bbci.co.uk/news/rss.xml'
+    feed = feedparser.parse(feed_url)
+    response = requests.get(feed_url)
+    response.raise_for_status()
+    articles = []
 
-        # Format the content with line breaks
-        formatted_content = format_paragraphs(text_content, max_length=80)
+    for entry in feed.entries[:5]:
+        title = f"{Style.BRIGHT}{Fore.CYAN}{entry.title}{Style.RESET_ALL}"
+        summary = entry.summary if 'summary' in entry else "No summary available."
 
-        # Summarize if content is lengthy
-        if len(text_content.split()) > 300:
-            summary = summarizer(text_content, max_length=50, min_length=25, do_sample=False)
-            return format_paragraphs(summary[0]['summary_text'], max_length=80)
-        else:
-            return formatted_content
-    except requests.RequestException as e:
-        return "I'm sorry, but I couldn't retrieve the news right now."
+        article_text = f"{title}\n{summary}"
+        articles.append(format_paragraphs(article_text, max_length=80))
+    return "\n\n".join(articles) if articles else "No news available at the moment."
 
 # Fetch a Wikipedia summary based on the user's query
 def fetch_wikipedia_summary(query):
@@ -164,22 +162,22 @@ chatbot = Chat(patterns, reflections)
 print("Welcome to Querin 2.0! Type 'quit' to exit.")
 
 while True:
-    user_input = input("You: ")
+    user_input = input(f"{Style.BRIGHT}{Fore.GREEN}You: {Style.RESET_ALL}")
 
     # Exit condition
     if user_input.lower() in ["quit", "exit", "bye"]:
-        print("Querin 2.0: Goodbye! Take care. See you later, alligator!")
+        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0: {Style.RESET_ALL}Goodbye! Take care. See you later, alligator!")
         break
 
     # Check for predefined patterns
     pattern_response = chatbot.respond(user_input)
 
     if pattern_response:
-        print("Querin 2.0:", pattern_response)
+        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", pattern_response)
 
     elif is_query(user_input):
-        print("Querin 2.0 (Resource):", resource_response_enhanced(user_input))
+        print(f"{Style.BRIGHT}{Fore.YELLOW}Querin 2.0:{Style.RESET_ALL}", resource_response_enhanced(user_input))
 
     else:
-        print("Querin 2.0:", respond_to_sentiment(user_input))
+        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", respond_to_sentiment(user_input))
 

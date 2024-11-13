@@ -1,4 +1,4 @@
-![alt text](https://i.ibb.co/C5nTSnj/Querin-logo-first-removebg.png)
+![alt text](https://camo.githubusercontent.com/f8b934b838ff8ba845ef97135975f8a99c1e19f3d9450893c54a2868d03b9802/68747470733a2f2f692e6962622e636f2f43356e54536e6a2f51756572696e2d6c6f676f2d66697273742d72656d6f766562672e706e67)
 
 # Querin
 Querin is a Python-based chatbot designed to interact with users, fetch the latest headlines from the BBC website, and retrieve summaries of topics from Wikipedia. It's a helpful tool for quick information retrieval and exploration of current events.

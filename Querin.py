@@ -9,6 +9,7 @@ from nltk.chat.util import Chat
 from textblob import TextBlob
 from transformers import pipeline
 from colorama import Fore, Style
+from urllib.parse import quote
 
 warnings.filterwarnings('ignore')
 
@@ -18,6 +19,7 @@ summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 # Define patterns for the chatbot
 patterns = [
     [r"my name is (.*)", ["Hello %1, nice to meet you!"]],
+    [r"can i ask you a question?", ["Of course!", "Sure!", "Yes, you can ask me whatever you want!"]],
     [r"thank you|thanks|thx|appreciate it", ["You're welcome!"]],
     [r"hi|hello|hey", ["Hello!", "Hi there!", "Hey!"]],
     [r"how are you(.*)", ["I'm Querin 2.0, but I'm doing great! How about you?"]],
@@ -111,6 +113,7 @@ def fetch_news_article():
 # Fetch a Wikipedia summary based on the user's query
 def fetch_wikipedia_summary(query):
     search_query = query.replace("explain", "").replace("what is", "").replace("who is","").replace("where is","").strip()
+    search_query = quote(search_query)
     # Use the Wikipedia API to search for the page
     search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={search_query}&format=json"
     try:
@@ -119,7 +122,7 @@ def fetch_wikipedia_summary(query):
         search_results = search_response.json()
         if search_results['query']['search']:
             page_title = search_results['query']['search'][0]['title']
-            page_url = f"https://en.wikipedia.org/wiki/{page_title.replace(' ', '_')}"
+            page_url = f"https://en.wikipedia.org/wiki/{quote(page_title)}"
             page_response = requests.get(page_url)
             page_response.raise_for_status()
             soup = BeautifulSoup(page_response.text, 'html.parser')

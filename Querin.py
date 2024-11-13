@@ -168,7 +168,7 @@ while True:
 
     # Exit condition
     if user_input.lower() in ["quit", "exit", "bye"]:
-        print("Querin 2.0: Goodbye! Take care.")
+        print("Querin 2.0: Goodbye! Take care. See you later, alligator!")
         break
 
     # Check for predefined patterns

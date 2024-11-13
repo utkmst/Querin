@@ -33,13 +33,16 @@ python -m textblob.download_corpora
 Virtual Environment (Optional): It's recommended to use a virtual environment to manage dependencies:
 
 python -m venv querin_env
+
 source querin_env/bin/activate  # For Linux/Mac
+
 querin_env\Scripts\activate  # For Windows
 
 # Usage
 Clone the Repository:
 
-git clone https://github.com/yourusername/Querin.git
+git clone https://github.com/ashuredd/Querin.git
+
 cd Querin
 
 Run the Bot: Start Querin 2.0 by running the following command:

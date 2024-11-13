@@ -1,0 +1,5 @@
+13.11.2024
+To do 
+Wikipedia fetch error: If first 2 paragraphs are empty for <p class> it gives nothing, but sometimes
+searching a person can have complexitiy like Atatürk and Atatürk's reforms so it gives just the titles
+of them.

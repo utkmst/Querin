@@ -123,15 +123,39 @@ def fetch_wikipedia_summary(query):
         search_response.raise_for_status()
         search_results = search_response.json()
         if search_results['query']['search']:
-            page_title = search_results['query']['search'][0]['title']
+            page_title = search_results['query']['search'][0]['title']        
             page_url = f"https://en.wikipedia.org/wiki/{quote(page_title)}"
             page_response = requests.get(page_url)
             page_response.raise_for_status()
             soup = BeautifulSoup(page_response.text, 'html.parser')
             paragraphs = soup.find_all('p')
-            text_content = ' '.join([para.get_text() for para in paragraphs[:2]])
-            formatted_content = format_paragraphs(text_content, max_length=80)
-            return formatted_content
+            
+            # Initialize a list to store valid paragraphs' text
+            valid_paragraphs = []
+
+            # Loop through all paragraphs (or the first ones, as needed)
+            for para in paragraphs:
+                # Extract the text and strip whitespace
+                para_text = para.get_text(strip=True)
+
+                # Check if the paragraph has meaningful content and doesn't have 'mw-empty-elt' class
+                if para_text and 'mw-empty-elt' not in para.get('class', []):
+                    valid_paragraphs.append(para_text)
+
+                # Stop once we've collected two valid paragraphs
+                if len(valid_paragraphs) == 2:
+                    break
+
+            # Join the valid paragraphs into a single string
+            text_content = ' '.join(valid_paragraphs)
+            formatted_content = format_paragraphs(text_content, max_length=80)    
+
+            # If text_content is empty, print a message or handle it accordingly
+            if text_content:
+                return formatted_content
+            else:
+                print("No meaningful content found in the selected paragraphs.")
+                      
         else:
             return "I couldn't find relevant information on Wikipedia for that query."
 
@@ -172,6 +196,11 @@ def slow_typing(text, delay=0.02):
 
 # Main conversation loop
 print("Welcome to Querin 2.0! Type 'quit' to exit.")
+
+
+
+
+
 
 while True:
     user_input = input(f"{Style.BRIGHT}{Fore.GREEN}You: {Style.RESET_ALL}")

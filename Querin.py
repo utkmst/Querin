@@ -75,7 +75,7 @@ def fetch_news_article():
         soup = BeautifulSoup(response.text, 'html.parser')
         paragraphs = soup.find_all('p')
         text_content = ' '.join([para.get_text() for para in paragraphs])
-        print(f'text_content = {text_content}')
+        
         # Summarize if content is lengthy
 
         if len(text_content.split()) > 300:

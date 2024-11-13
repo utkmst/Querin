@@ -18,7 +18,7 @@ Text Summarization: Uses a transformer-based model to condense lengthy text from
 Python Libraries
 To run Querin 2.0, you'll need to install several dependencies. Use the following commands to set up your environment:
 
-pip install nltk requests beautifulsoup4 textblob transformers torch
+pip install nltk requests beautifulsoup4 textblob transformers torch feedparser colorama
 
 # Additional Setup Steps
 NLTK Data: Download the WordNet data for lemmatization.

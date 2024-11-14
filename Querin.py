@@ -5,6 +5,8 @@ import requests
 import feedparser
 import time
 import sys
+import re
+import random
 from bs4 import BeautifulSoup
 from nltk.stem import WordNetLemmatizer
 from nltk.chat.util import Chat, reflections
@@ -13,14 +15,22 @@ from transformers import pipeline
 from colorama import Fore, Style
 from urllib.parse import quote
 
+#Memory to store contextual information
+
+session_memory = {}
+
 warnings.filterwarnings('ignore')
 
 # Load summarization model
 summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 
 # Define patterns for the chatbot
-patterns = [
+# Define patterns for the chatbot
+patterns = [  
     [r"my name is (.*)", ["Hello %1, nice to meet you!"]],
+    [r'Who am I?', ['You haven’t told me your name yet!', 'I don’t know your name yet. Can you tell me?']],
+    [r'My name is (.*)', ['Nice to meet you, %s! What would you like to know?', 'Hello %s, what can I help you with today?']],
+    [r'Goodbye', ['Goodbye! It was nice talking to you.', 'Take care!']],
     [r"can i ask you a question?", ["Of course!", "Sure!", "Yes, you can ask me whatever you want!"]],
     [r"thank you|thanks|thx|appreciate it", ["You're welcome!"]],
     [r"hi|hello|hey", ["Hello!", "Hi there!", "Hey!"]],
@@ -29,12 +39,10 @@ patterns = [
     [r"quit", ["Bye! It was nice talking to you. Have a great day!"]],
     [r"what (.*) you like to do?", ["I enjoy chatting with humans like you!", "I love learning new words."]],
     [r"do you like (.*)?", ["I don't have preferences, but I think %1 sounds interesting!"]],
-    [r"who (.*) created you?",
-     ["I was created by programmers from Querin Corporation", "I was made by tech enthusiasts!"]],
-    [r"(.*) movie recommendations?",
-     ["I recommend 'Inception' for movies!"]], 
+    [r"who (.*) created you?", ["I was created by programmers from Querin Corporation", "I was made by tech enthusiasts!"]],
+    [r"(.*) movie recommendations?", ["I recommend 'Inception' for movies!"]], 
     [r"(.*) book recommendations?", ["Try '1984' by George Orwell if you like books."]], 
-    [r"(.*) song recommendations?", ["Listen APT. by Rose & Bruno Mars"]]
+    [r"(.*) song recommendations?", ["Listen APT. by Rose & Bruno Mars"]],  
 ]
 
 # Reflections for natural language adjustments
@@ -121,29 +129,29 @@ def fetch_wikipedia_summary(query):
     try:
         search_response = requests.get(search_url)
         search_response.raise_for_status()
-        search_results = search_response.json()
+        search_results = search_response.json()     
         if search_results['query']['search']:
-            page_title = search_results['query']['search'][0]['title']        
+            page_title = search_results['query']['search'][0]['title']       
             page_url = f"https://en.wikipedia.org/wiki/{quote(page_title)}"
             page_response = requests.get(page_url)
             page_response.raise_for_status()
             soup = BeautifulSoup(page_response.text, 'html.parser')
             paragraphs = soup.find_all('p')
-            
+
             # Initialize a list to store valid paragraphs' text
             valid_paragraphs = []
 
             # Loop through all paragraphs (or the first ones, as needed)
             for para in paragraphs:
                 # Extract the text and strip whitespace
-                para_text = para.get_text(strip=True)
+                para_text = para.get_text(separator=" ",strip=True)
 
                 # Check if the paragraph has meaningful content and doesn't have 'mw-empty-elt' class
-                if para_text and 'mw-empty-elt' not in para.get('class', []):
+                if para_text and len(para_text) > 50 and 'mw-empty-elt' not in para.get('class', []):
                     valid_paragraphs.append(para_text)
 
                 # Stop once we've collected two valid paragraphs
-                if len(valid_paragraphs) == 2:
+                if sum(len(p) for p in valid_paragraphs) >= 300:
                     break
 
             # Join the valid paragraphs into a single string
@@ -151,7 +159,7 @@ def fetch_wikipedia_summary(query):
             formatted_content = format_paragraphs(text_content, max_length=80)    
 
             # If text_content is empty, print a message or handle it accordingly
-            if text_content:
+            if formatted_content:
                 return formatted_content
             else:
                 print("No meaningful content found in the selected paragraphs.")
@@ -160,7 +168,7 @@ def fetch_wikipedia_summary(query):
             return "I couldn't find relevant information on Wikipedia for that query."
 
     except requests.RequestException:
-        return "I couldn't find relevant information on Wikipedia for that query."
+        return "There was an issue reaching Wikipedia for that query."
 
 # Generate a resource-based response
 def resource_response_enhanced(user_response):
@@ -187,6 +195,45 @@ def is_query(user_input):
 # Initialize Chat object
 chatbot = Chat(patterns, reflections)
 
+def get_pattern_response(user_input):
+    for pattern, responses in patterns:
+        match = re.match(pattern, user_input.lower())
+        if match:
+            # If there's a match, return a randomly chosen response
+            return random.choice(responses) % tuple(match.groups()) if match.groups() else random.choice(responses)
+    return None
+
+def chatbot_response(user_input):
+    global session_memory
+    user_input_lower = user_input.lower()
+
+    # Check if the user says "who am I" and return the stored name if available
+    if "who am i" in user_input_lower:
+        if session_memory.get('user_name'):
+            return f"Your name is {session_memory['user_name']}."
+        else:
+            return "You haven't told me your name yet."
+
+    # Handle name introduction (update user_name in session_memory)
+    if "my name is" in user_input_lower:
+        name = user_input.replace("my name is", "").strip()
+        session_memory['user_name'] = name  # Store the user's name in session memory
+        return f"Hello {name}, nice to meet you!"
+
+    # Handle "Goodbye" and clear session memory
+    if "goodbye" in user_input_lower:
+        session_memory.clear()  # Clear session memory on goodbye
+        return "Goodbye! Take care!"
+
+    # Handle pattern-based responses
+    pattern_response = get_pattern_response(user_input)
+    if pattern_response:
+        return pattern_response
+
+    # Default fallback response if no pattern matches
+    return "Sorry, I didn’t quite understand that. Can you ask something else?"
+
+
 def slow_typing(text, delay=0.02):
     for char in text:
         sys.stdout.write(char)
@@ -196,11 +243,6 @@ def slow_typing(text, delay=0.02):
 
 # Main conversation loop
 print("Welcome to Querin 2.0! Type 'quit' to exit.")
-
-
-
-
-
 
 while True:
     user_input = input(f"{Style.BRIGHT}{Fore.GREEN}You: {Style.RESET_ALL}")

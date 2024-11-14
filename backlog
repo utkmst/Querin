@@ -1,5 +1,12 @@
 13.11.2024
 To do 
 Wikipedia fetch error: If first 2 paragraphs are empty for <p class> it gives nothing, but sometimes
-searching a person can have complexitiy like Atatürk and Atatürk's reforms so it gives just the titles
+searching a person can have complexity like Atatürk and Atatürk's reforms so it gives just the titles
 of them.
+Status: Fixed
+
+
+14.11.2024
+To do
+Session Memory error: It can't remember the user name when asked 'Who am I?' question.
+Status: Not fixed yet

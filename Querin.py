@@ -17,7 +17,6 @@ from urllib.parse import quote
 
 #Memory to store contextual information
 
-session_memory = {}
 
 warnings.filterwarnings('ignore')
 
@@ -44,6 +43,8 @@ patterns = [
     [r"(.*) book recommendations?", ["Try '1984' by George Orwell if you like books."]], 
     [r"(.*) song recommendations?", ["Listen APT. by Rose & Bruno Mars"]],  
 ]
+
+session_memory = {}
 
 # Reflections for natural language adjustments
 reflections = {
@@ -153,10 +154,18 @@ def fetch_wikipedia_summary(query):
                 # Stop once we've collected two valid paragraphs
                 if sum(len(p) for p in valid_paragraphs) >= 300:
                     break
+            infobox = soup.find('table', class_='infobox')
+            birth_date = None
+            if infobox:
+                birth_date_row = infobox.find('span', class_='bday')
+                if birth_date_row:
+                    birth_date = birth_date_row.get_text(strip=True)
 
             # Join the valid paragraphs into a single string
             text_content = ' '.join(valid_paragraphs)
-            formatted_content = format_paragraphs(text_content, max_length=80)    
+            formatted_content = format_paragraphs(text_content, max_length=80)
+            if birth_date:
+                session_memory['birth_date'] = birth_date 
 
             # If text_content is empty, print a message or handle it accordingly
             if formatted_content:
@@ -170,10 +179,63 @@ def fetch_wikipedia_summary(query):
     except requests.RequestException:
         return "There was an issue reaching Wikipedia for that query."
 
+def chatbot_response(user_input):
+    global session_memory
+    user_input_lower = user_input.lower()
+    question_prefixes = ["who is", "what is", "where is", "when is", "how to", "why is"]
+    
+    # Check if the user says "who am I" and return the stored name if available
+    if "who am i" in user_input_lower:
+        if 'user_name' in session_memory:
+            return f"Your name is {session_memory['user_name']}."
+        else:
+            return "You haven't told me your name yet."
+
+    # Handle name introduction (update user_name in session_memory)
+    if "my name is" in user_input_lower:
+        name = user_input.replace("my name is", "").strip()
+        session_memory['user_name'] = name  # Store the user's name in session memory
+        return f"Hello {name}, nice to meet you!"
+    
+    if "when was" in user_input_lower and session_memory.get("birth_date"):
+        return f"{session_memory['last_topic']} was born on {session_memory['birth_date']}."
+
+    # Handle "Goodbye" and clear session memory
+    if is_query(user_input):
+        for prefix in question_prefixes:
+            if user_input_lower.startswith(prefix):
+                session_memory['last_topic'] = user_input[len(prefix):].strip()
+                break
+            else:
+                session_memory['last_topic'] = user_input.strip()
+        return resource_response_enhanced
+
+    pattern_response = get_pattern_response(user_input)
+    if pattern_response:
+        return pattern_response
+    
+    sentiment_response = respond_to_sentiment(user_input)
+    if sentiment_response:
+        return sentiment_response
+
+    # Handle pattern-based responses
+    pattern_response = get_pattern_response(user_input)
+    if pattern_response:
+        return pattern_response
+
+    # Clear session memory on goodbye or major topic change
+    if any(word in user_input_lower for word in ["quit", "bye", "exit"]):
+        session_memory.clear()  # Clear all saved information
+         
+    # Default fallback response if no pattern matches
+    return "Sorry, I didn’t quite understand that. Can you ask something else?"
+
 # Generate a resource-based response
 def resource_response_enhanced(user_response):
     querin_response = fetch_from_source(user_response)
     follow_up = "Would you like more information or details on a related topic?"
+    if session_memory.get('last_topic'):
+        follow_up += f" Last time, you asked about '{session_memory['last_topic']}'."
     return querin_response + "\n" + follow_up
 
 # Tokenization and normalization helpers
@@ -199,40 +261,16 @@ def get_pattern_response(user_input):
     for pattern, responses in patterns:
         match = re.match(pattern, user_input.lower())
         if match:
-            # If there's a match, return a randomly chosen response
-            return random.choice(responses) % tuple(match.groups()) if match.groups() else random.choice(responses)
+            response = random.choice(responses)
+            if match.groups():
+                try:
+                    return response % tuple(match.groups())
+                except TypeError:
+                    return response
+            else:
+                return response
+            
     return None
-
-def chatbot_response(user_input):
-    global session_memory
-    user_input_lower = user_input.lower()
-
-    # Check if the user says "who am I" and return the stored name if available
-    if "who am i" in user_input_lower:
-        if session_memory.get('user_name'):
-            return f"Your name is {session_memory['user_name']}."
-        else:
-            return "You haven't told me your name yet."
-
-    # Handle name introduction (update user_name in session_memory)
-    if "my name is" in user_input_lower:
-        name = user_input.replace("my name is", "").strip()
-        session_memory['user_name'] = name  # Store the user's name in session memory
-        return f"Hello {name}, nice to meet you!"
-
-    # Handle "Goodbye" and clear session memory
-    if "goodbye" in user_input_lower:
-        session_memory.clear()  # Clear session memory on goodbye
-        return "Goodbye! Take care!"
-
-    # Handle pattern-based responses
-    pattern_response = get_pattern_response(user_input)
-    if pattern_response:
-        return pattern_response
-
-    # Default fallback response if no pattern matches
-    return "Sorry, I didn’t quite understand that. Can you ask something else?"
-
 
 def slow_typing(text, delay=0.02):
     for char in text:
@@ -254,13 +292,13 @@ while True:
         break
 
     # Check for predefined patterns
-    pattern_response = chatbot.respond(user_input)
+    response = chatbot_response(user_input)
 
-    if pattern_response:
+    if isinstance(response, str):
         print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", end=" ")  
     
         # Apply slow typing only to the response
-        slow_typing(pattern_response, delay=0.03)
+        slow_typing(response, delay=0.03)
 
     elif is_query(user_input):
         print(f"{Style.BRIGHT}{Fore.YELLOW}Querin 2.0:{Style.RESET_ALL}", end=" ")

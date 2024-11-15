@@ -14,9 +14,39 @@ from textblob import TextBlob
 from transformers import pipeline
 from colorama import Fore, Style
 from urllib.parse import quote
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-#Memory to store contextual information
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad token to eos token
+model = GPT2LMHeadModel.from_pretrained("gpt2")
 
+def generate_gpt2_response(user_input, max_length=100):
+    story_prompt = f"Here is a story about space travel: {user_input}"
+    # Tokenize the input
+    input_ids = tokenizer.encode(user_input, return_tensors="pt")
+    
+    # Generate response with attention mask and pad_token_id
+    output = model.generate(
+        input_ids,
+        attention_mask=input_ids.ne(tokenizer.pad_token_id),  # Set attention mask
+        max_length=max_length + len(input_ids[0]),
+        num_return_sequences=1,
+        no_repeat_ngram_size=2,
+        top_k=50,
+        top_p=0.9,
+        temperature=0.7,
+        num_beams=1,
+        repetition_penalty=1.3,
+        pad_token_id=tokenizer.eos_token_id, # Set the pad token
+        early_stopping=True  
+    )
+    
+    # Decode the generated text
+    response = tokenizer.decode(output[0], skip_special_tokens=True)
+    if response.lower().startswith(user_input.lower()):
+        response = response[len(user_input):].strip()
+
+    return response
 
 warnings.filterwarnings('ignore')
 
@@ -44,6 +74,7 @@ patterns = [
     [r"(.*) song recommendations?", ["Listen APT. by Rose & Bruno Mars"]],  
 ]
 
+#Memory to store contextual information
 session_memory = {}
 
 # Reflections for natural language adjustments
@@ -183,7 +214,7 @@ def chatbot_response(user_input):
     global session_memory
     user_input_lower = user_input.lower()
     question_prefixes = ["who is", "what is", "where is", "when is", "how to", "why is"]
-    
+
     # Check if the user says "who am I" and return the stored name if available
     if "who am i" in user_input_lower:
         if 'user_name' in session_memory:
@@ -200,35 +231,26 @@ def chatbot_response(user_input):
     if "when was" in user_input_lower and session_memory.get("birth_date"):
         return f"{session_memory['last_topic']} was born on {session_memory['birth_date']}."
 
-    # Handle "Goodbye" and clear session memory
+    # Handle query check with session memory update
     if is_query(user_input):
         for prefix in question_prefixes:
             if user_input_lower.startswith(prefix):
                 session_memory['last_topic'] = user_input[len(prefix):].strip()
                 break
-            else:
-                session_memory['last_topic'] = user_input.strip()
-        return resource_response_enhanced
+        return resource_response_enhanced(user_input)
 
+    # Check for pattern response
     pattern_response = get_pattern_response(user_input)
     if pattern_response:
         return pattern_response
     
+    # Check for sentiment response
     sentiment_response = respond_to_sentiment(user_input)
-    if sentiment_response:
+    if sentiment_response != "Thanks for sharing that.":  # Default text means no sentiment
         return sentiment_response
 
-    # Handle pattern-based responses
-    pattern_response = get_pattern_response(user_input)
-    if pattern_response:
-        return pattern_response
-
-    # Clear session memory on goodbye or major topic change
-    if any(word in user_input_lower for word in ["quit", "bye", "exit"]):
-        session_memory.clear()  # Clear all saved information
-         
-    # Default fallback response if no pattern matches
-    return "Sorry, I didn’t quite understand that. Can you ask something else?"
+    # Generate a GPT-2 response if no patterns or specific responses are matched
+    return generate_gpt2_response(user_input)
 
 # Generate a resource-based response
 def resource_response_enhanced(user_response):

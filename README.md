@@ -52,6 +52,8 @@ Run the Bot: Start Querin-GPT1.0 by running the following command:
 
 python Querin-GPT1.0.py
 
+python Querin2.0.py (if you want the original version, without GPT model)
+
 Once the bot is running, you can interact with it directly through the console.
 
 # Example Interactions

@@ -44,7 +44,7 @@ querin_env\Scripts\activate  # For Windows
 # Usage
 Clone the Repository:
 
-git clone https://github.com/ashuredd/Querin.git
+git clone https://github.com/utkmst/Querin.git
 
 cd Querin
 

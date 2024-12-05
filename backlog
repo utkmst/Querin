@@ -10,3 +10,13 @@ Status: Fixed
 To do
 Session Memory error: It can't remember the user name when asked 'Who am I?' question.
 Status: Fixed
+
+4.12.2024
+To do
+Localize wikipedia, weather, and news features
+Status: Done
+
+5.12.2024
+To do
+Question prefixes error: When asked "nasılsın" in Turkish, it redirects to definition of fetch from wikipedia instead of answering from pattern.
+Status: Not fixed

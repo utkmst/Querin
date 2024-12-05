@@ -7,6 +7,7 @@ import time
 import sys
 import re
 import random
+import json
 from bs4 import BeautifulSoup
 from nltk.stem import WordNetLemmatizer
 from nltk.chat.util import Chat, reflections
@@ -15,13 +16,50 @@ from transformers import pipeline
 from colorama import Fore, Style
 from urllib.parse import quote
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from translate import Translator
+
 
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad token to eos token
 model = GPT2LMHeadModel.from_pretrained("gpt2")
 
+config_file_path = '/home/ashuredd/Querin/Querin/config.json'
+
+config = {}
+try:
+    with open(config_file_path, 'r') as file:
+        if file.readable() and file.seek(0, 2) != 0:  # Check if file is not empty
+            file.seek(0)  # Reset file pointer to the beginning
+            config = json.load(file)
+        else:
+            raise ValueError("Configuration file is empty")
+except json.JSONDecodeError as e:
+    print(f"Error decoding JSON: {e}")
+except FileNotFoundError:
+    print("Configuration file not found")
+except ValueError as e:
+    print(e)
+
+api_key = config.get("WEATHER_API_KEY")
+if not api_key:
+    print("API key not found in config.json.")
+    exit(1)  # Exit the script if the API key is not found
+
+with open('localization.json', 'r', encoding='utf-8') as file:
+    translations = json.load(file)
+
+def get_translations(language):
+    return translations.get(language, translations['en'])
+
+def translate_text(text: str, target_language: str) -> str:
+    translator = Translator(to_lang=target_language)
+    translation = translator.translate(text)
+    return translation
+
+def detect_language(text: str) -> str:
+    return "en"
+
 def generate_gpt2_response(user_input, max_length=100):
-    story_prompt = f"Here is a story about space travel: {user_input}"
     # Tokenize the input
     input_ids = tokenizer.encode(user_input, return_tensors="pt")
     
@@ -48,10 +86,37 @@ def generate_gpt2_response(user_input, max_length=100):
 
     return response
 
+language_prompt = """
+Please select a language:
+en = English
+es = Spanish
+tr = Turkish
+de = German
+kr = Korean
+jp = Japanese
+ch = Chinese
+ru = Russian
+gr = Greek
+id = Indonesian
+Enter the code corresponding to your language choice: """
+
+try:
+    language_code = input(language_prompt).strip()
+except (EOFError, KeyboardInterrupt):
+    print("\nInput interrupted. Exiting the program.")
+    exit(1)
+
+if language_code not in translations:
+    print("Selected language is not supported. Defaulting to English.")
+    language_code = 'en'
+
+lang_data = translations.get(language_code, translations['en'])
+
 warnings.filterwarnings('ignore')
 
 # Load summarization model
 summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+sentiment_analyzer = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
 
 # Define patterns for the chatbot
 # Define patterns for the chatbot
@@ -63,7 +128,7 @@ patterns = [
     [r"can i ask you a question?", ["Of course!", "Sure!", "Yes, you can ask me whatever you want!"]],
     [r"thank you|thanks|thx|appreciate it", ["You're welcome!"]],
     [r"hi|hello|hey", ["Hello!", "Hi there!", "Hey!"]],
-    [r"how are you(.*)", ["I'm Querin 2.0, but I'm doing great! How about you?"]],
+    [r"how are you(.*)", ["I'm Querin-GPT1.0, but I'm doing great! How about you?"]],
     [r"what is your name?", ["I am a chatbot designed by Querin Corporation. What's yours?"]],
     [r"quit", ["Bye! It was nice talking to you. Have a great day!"]],
     [r"what (.*) you like to do?", ["I enjoy chatting with humans like you!", "I love learning new words."]],
@@ -95,6 +160,11 @@ reflections = {
     "you": "me",
     "me": "you"
 }
+
+patterns = translations[language_code].get('patterns', [])
+reflections.update(translations[language_code].get('reflections', {}))
+sentiments = translations[language_code].get('sentiments', {})
+
 def format_paragraphs(text, max_length=80):
     """Format the text to ensure it wraps at a specified maximum length."""
     words = text.split()
@@ -119,26 +189,25 @@ def format_paragraphs(text, max_length=80):
 
 # Sentiment-based response function
 def respond_to_sentiment(user_input):
-    analysis = TextBlob(user_input)
-    if analysis.sentiment.polarity > 0:
-        return "I'm glad to hear that!"
-    elif analysis.sentiment.polarity < 0:
-        return "I'm sorry to hear that. Hope things get better!"
+    analysis = sentiment_analyzer(user_input)[0]
+    if analysis['label'] == '5 stars':
+        return random.choice(sentiments.get('positive', ["I'm glad to hear that!"]))
+    elif analysis['label'] == '1 star':
+        return random.choice(sentiments.get('negative', ["I'm sorry to hear that."]))
     else:
-        return "Thanks for sharing that."
-
+        return random.choice(sentiments.get('neutral', ["I see."]))
+'''
 # Fetch text from a website based on the user's query
 def fetch_from_source(query):
     if "news" in query or "latest" in query:
         return fetch_news_article()
-    elif "explain" in query or "what is" in query or "who is" in query or "where is" in query:
-        return fetch_wikipedia_summary(query)
     else:
         return "I'm not sure which source to use. Could you clarify your question?"
+'''
 
 # Fetch latest news article
 def fetch_news_article():
-    feed_url = 'http://feeds.bbci.co.uk/news/rss.xml'
+    feed_url = lang_data.get('news_feed_url', 'http://feeds.bbci.co.uk/news/rss.xml')
     feed = feedparser.parse(feed_url)
     response = requests.get(feed_url)
     response.raise_for_status()
@@ -153,18 +222,18 @@ def fetch_news_article():
     return "\n\n".join(articles) if articles else "No news available at the moment."
 
 # Fetch a Wikipedia summary based on the user's query
-def fetch_wikipedia_summary(query):
+def fetch_wikipedia_summary(query, lang='en'):
     search_query = query.replace("explain", "").replace("what is", "").replace("who is","").replace("where is","").strip()
     search_query = quote(search_query)
     # Use the Wikipedia API to search for the page
-    search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={search_query}&format=json"
+    search_url = f"https://{lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch={search_query}&format=json"
     try:
         search_response = requests.get(search_url)
         search_response.raise_for_status()
         search_results = search_response.json()     
         if search_results['query']['search']:
             page_title = search_results['query']['search'][0]['title']       
-            page_url = f"https://en.wikipedia.org/wiki/{quote(page_title)}"
+            page_url = f"https://{lang}.wikipedia.org/wiki/{quote(page_title)}"
             page_response = requests.get(page_url)
             page_response.raise_for_status()
             soup = BeautifulSoup(page_response.text, 'html.parser')
@@ -210,11 +279,67 @@ def fetch_wikipedia_summary(query):
     except requests.RequestException:
         return "There was an issue reaching Wikipedia for that query."
 
+import requests
+
+def get_weather(city: str, api_key: str, target_lang: str) -> str:
+    base_url = "http://api.weatherapi.com/v1/current.json"
+    params = {
+        "key": api_key,
+        "q": city,
+        "aqi": "yes"  # Set "yes" if you want air quality data
+    }
+    try:
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        data = response.json()
+        
+        if 'location' in data and 'current' in data:
+            location = data['location']['name']
+            current = data['current']
+            condition = current['condition']['text']
+            temp_c = current['temp_c']
+            feelslike_c = current['feelslike_c']
+            humidity = current['humidity']
+            wind_kph = current['wind_kph']
+            
+            weather_info = (f"Weather in {location}: {condition}, "
+                            f"Temperature: {temp_c}°C, Feels like: {feelslike_c}°C, "
+                            f"Humidity: {humidity}%, Wind: {wind_kph} kph")
+            translator = Translator(to_lang=target_lang)
+            translated_weather_info = translator.translate(weather_info)
+            return translated_weather_info
+        else:
+            return "Unexpected response format from the weather service."
+    except requests.RequestException as e:
+        return f"There was an issue reaching the weather service: {e}"
+    except KeyError as e:
+        return f"Unexpected response format: {e}"
+
+
 def chatbot_response(user_input):
     global session_memory
+    user_language = language_code
+    question_prefixes = lang_data['question_prefixes']
+    weather_prefixes = lang_data['weather_prefixes']
     user_input_lower = user_input.lower()
-    question_prefixes = ["who is", "what is", "where is", "when is", "how to", "why is"]
 
+    for prefix in weather_prefixes:
+        if user_input_lower.startswith(prefix) or user_input_lower.endswith(prefix) or prefix in user_input_lower:
+            city = user_input_lower.replace(prefix, "").strip()
+            api_key = config.get("WEATHER_API_KEY")
+            if not api_key:
+                return "API key not found in the configuration"
+            return get_weather(city, api_key, target_lang=language_code)
+
+    
+    for prefix in lang_data['news_prefixes']:
+        if user_input_lower.startswith(prefix) or user_input_lower.endswith(prefix) or prefix in user_input_lower:
+            return fetch_news_article()
+    
+    for prefix in lang_data['question_prefixes']:
+        if user_input_lower.startswith(prefix) or user_input_lower.endswith(prefix) or prefix in user_input_lower:
+            return fetch_wikipedia_summary(user_input, lang=language_code)
+            
     # Check if the user says "who am I" and return the stored name if available
     if "who am i" in user_input_lower:
         if 'user_name' in session_memory:
@@ -226,19 +351,24 @@ def chatbot_response(user_input):
     if "my name is" in user_input_lower:
         name = user_input.replace("my name is", "").strip()
         session_memory['user_name'] = name  # Store the user's name in session memory
-        return f"Hello {name}, nice to meet you!"
+        response = f"Hello {name}, nice to meet you!"
+        return translate_text(response, user_language)
     
     if "when was" in user_input_lower and session_memory.get("birth_date"):
-        return f"{session_memory['last_topic']} was born on {session_memory['birth_date']}."
-
+        response = f"{session_memory['last_topic']} was born on {session_memory['birth_date']}."
+        return translate_text(response, user_language)
+    
+    
+    
     # Handle query check with session memory update
     if is_query(user_input):
         for prefix in question_prefixes:
             if user_input_lower.startswith(prefix):
                 session_memory['last_topic'] = user_input[len(prefix):].strip()
                 break
-        return resource_response_enhanced(user_input)
-
+        response = resource_response_enhanced(user_input)
+        return translate_text(response, user_language)
+    
     # Check for pattern response
     pattern_response = get_pattern_response(user_input)
     if pattern_response:
@@ -253,13 +383,14 @@ def chatbot_response(user_input):
     return generate_gpt2_response(user_input)
 
 # Generate a resource-based response
+'''
 def resource_response_enhanced(user_response):
     querin_response = fetch_from_source(user_response)
     follow_up = "Would you like more information or details on a related topic?"
     if session_memory.get('last_topic'):
         follow_up += f" Last time, you asked about '{session_memory['last_topic']}'."
     return querin_response + "\n" + follow_up
-
+'''
 # Tokenization and normalization helpers
 lemmer = WordNetLemmatizer()
 
@@ -286,12 +417,10 @@ def get_pattern_response(user_input):
             response = random.choice(responses)
             if match.groups():
                 try:
-                    return response % tuple(match.groups())
-                except TypeError:
-                    return response
-            else:
-                return response
-            
+                    response = response % tuple(match.groups())
+                except (TypeError, ValueError):
+                    pass
+            return response
     return None
 
 def slow_typing(text, delay=0.02):
@@ -302,31 +431,33 @@ def slow_typing(text, delay=0.02):
     print()
 
 # Main conversation loop
-print("Welcome to Querin 2.0! Type 'quit' to exit.")
+welcome = translations[language_code]['welcome']
+print(welcome)
 
 while True:
     user_input = input(f"{Style.BRIGHT}{Fore.GREEN}You: {Style.RESET_ALL}")
 
     # Exit condition    
     if user_input.lower() in ["quit", "exit", "bye"]:
-        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0: {Style.RESET_ALL}", end="")
-        slow_typing("Goodbye! Take care. See you later, alligator!", delay=0.03)
+        print(f"{Style.BRIGHT}{Fore.RED}Querin-GPT1.0: {Style.RESET_ALL}", end="")
+        goodbye_message = translations[language_code]['goodbye']
+        slow_typing(goodbye_message, delay=0.03)
         break
 
     # Check for predefined patterns
     response = chatbot_response(user_input)
 
-    if isinstance(response, str):
-        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", end=" ")  
+    if response:
+        print(f"{Style.BRIGHT}{Fore.RED}Querin-GPT1.0:{Style.RESET_ALL}", end=" ")  
     
         # Apply slow typing only to the response
         slow_typing(response, delay=0.03)
 
     elif is_query(user_input):
-        print(f"{Style.BRIGHT}{Fore.YELLOW}Querin 2.0:{Style.RESET_ALL}", end=" ")
+        print(f"{Style.BRIGHT}{Fore.YELLOW}Querin-GPT1.0:{Style.RESET_ALL}", end=" ")
         slow_typing((resource_response_enhanced(user_input)), delay=0.01)
 
     else:
-        print(f"{Style.BRIGHT}{Fore.RED}Querin 2.0:{Style.RESET_ALL}", end=" ")
-        slow_typing((respond_to_sentiment(user_input)), delay=0.03)
-
+        response = respond_to_sentiment(user_input)
+        print(f"{Style.BRIGHT}{Fore.RED}Querin-GPT1.0:{Style.RESET_ALL}", end=" ")
+        slow_typing(response, delay=0.03)

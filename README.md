@@ -1,120 +1,165 @@
 ![alt text](https://camo.githubusercontent.com/f8b934b838ff8ba845ef97135975f8a99c1e19f3d9450893c54a2868d03b9802/68747470733a2f2f692e6962622e636f2f43356e54536e6a2f51756572696e2d6c6f676f2d66697273742d72656d6f766562672e706e67)
 
 # Querin🦋
-Querin is a Python-based chatbot that integrates the power of OpenAI's GPT-2 model for natural language generation, along with various features such as sentiment analysis, Wikipedia summarization, and BBC news retrieval. It is designed to interact with users conversationally, providing useful information and answering questions based on predefined patterns and external sources like news articles and Wikipedia.
+Querin is a multilingual, Python-based chatbot leveraging OpenAI's GPT-2 model to provide intelligent, conversational interactions. With features like sentiment analysis, real-time weather updates, news retrieval, Wikipedia summaries, and language translation, Querin is a versatile assistant designed to cater to diverse user needs.
 
 # Features
-Conversational Responses: Chat with Querin-GPT1.0 using predefined patterns for a smooth conversational experience.
+**🌐 Multilingual Support**
+Users can interact in multiple languages, including English, Spanish, Turkish, German, Korean, Japanese, Chinese, Russian, Greek, and Indonesian.
 
-Sentiment Analysis: Analyzes the sentiment of user input and responds empathetically.
+Custom translations for chatbot responses based on user-selected language.
 
-GPT-2 Powered Responses: Generates responses dynamically based on user input using the GPT-2 model.
+**🤖 GPT-2 Powered Conversations**
 
-BBC News Headlines: Fetches and summarizes the latest headlines from BBC news.
+Querin dynamically generates conversational responses using the GPT-2 model.
 
-Wikipedia Summaries: Retrieves detailed summaries of requested topics from Wikipedia.
+Handles free-form user input with context-aware and human-like replies.
 
-Text Summarization: Uses transformer models to condense lengthy articles or text into concise summaries.
+**📰 News Fetching**
 
-# Requirements 
-Python Libraries
-To run Querin-GPT1.0, you'll need to install several dependencies. Use the following commands to set up your environment:
+Retrieves the latest news articles from RSS feeds (default: BBC News).
 
-pip install nltk requests beautifulsoup4 textblob transformers torch feedparser colorama
+Summarizes news headlines for quick access.
 
-Additionally, ensure that the necessary NLTK data and TextBlob corpora are downloaded:
+**📖 Wikipedia Summaries**
 
+Fetches and summarizes relevant Wikipedia articles based on user queries.
+
+Supports localized summaries by fetching content in the user’s selected language.
+
+**🌦️ Real-Time Weather Updates**
+
+Provides detailed weather updates for any city using the WeatherAPI.
+
+Data includes current conditions, temperature, humidity, wind speed, and more.
+
+Translates weather information into the user’s chosen language.
+
+**🧠 Sentiment Analysis**
+
+Analyzes user sentiment using a BERT-based model.
+
+Empathizes with user emotions and provides supportive or neutral responses accordingly.
+
+**🔄 Dynamic Translations**
+
+Integrated translation support for translating responses into the user’s preferred language.
+
+**💬 Pattern-Based Responses**
+
+Recognizes predefined patterns to provide quick and direct responses (e.g., greetings, farewells, recommendations).
+
+**📜 Summarization**
+
+Uses transformer models for text summarization, condensing lengthy articles into concise summaries.
+
+# Requirements
+## Dependencies
+
+Install the following Python libraries to run Querin:
+
+```bash
+pip install nltk requests beautifulsoup4 textblob transformers torch feedparser colorama translate
+```
+Ensure required corpora are downloaded:
+```python
 import nltk
 nltk.download('wordnet')
-
-For TextBlob:
+```
+## For **TextBlob** corpora:
+```bash
 python -m textblob.download_corpora
+```
+## API Key
+Querin requires an API key for weather data. Add your WeatherAPI key to config.json in the following format:
+```json
+{
+  "WEATHER_API_KEY": "your_api_key_here"
+}
+```
+## File Requirements
 
-Optional: Setting Up a Virtual Environment
+config.json: Stores API keys and configurations.
 
-It's recommended to use a virtual environment to manage dependencies:
-
-python -m venv querin_env
-
-source querin_env/bin/activate  # For Linux/Mac
-
-querin_env\Scripts\activate  # For Windows
-
+localization.json: Contains translations for supported languages.
 
 # Usage
-Clone the Repository:
-
+## Setup
+1. Clone the Repository:
+```bash
 git clone https://github.com/utkmst/Querin.git
-
 cd Querin
-
-Run the Bot: Start Querin-GPT1.0 by running the following command:
-
+```
+2. Run the Bot: Start Querin-GPT1.0 by running the following command:
+```bash
 python Querin-GPT1.0.py
+```
+(if you want the original version, without GPT model):
+```bash
+python Querin2.0.py
+```
 
-python Querin2.0.py (if you want the original version, without GPT model)
 
-Once the bot is running, you can interact with it directly through the console.
+## Interaction
 
+Select your language from the prompt.
+
+Engage with Querin by typing inputs like:
+
+**"What's the weather in London?"**
+**"Fetch me the latest news."**
+**"Tell me about machine learning."**
+
+Exit the chatbot by typing:
+```plaintext
+quit
+```
 # Example Interactions
 
 Here’s an example of how you can interact with Querin-GPT1.0:
-
+```plaintext
 You: hi
+Querin-GPT1.0: Hello! How can I assist you today?
 
-Querin-GPT1.0: Hello!
+You: What's the weather in Tokyo?
+Querin-GPT1.0: Weather in Tokyo: Sunny, Temperature: 20°C, Feels like: 18°C, Humidity: 50%, Wind: 10 kph.
 
 You: news
-
 Querin-GPT1.0: Fetching BBC headlines...
+1. Headline: "Breaking News Title"
+2. Summary: "A short summary of the article."
 
-Headline 1 Headline 2 Headline 3
-
-You: what is machine learning
-
-Querin-GPT1.0: Fetching Wikipedia summary for 'machine learning'... Wikipedia: "Machine learning is a field of study that gives computers the ability to learn without being explicitly programmed."
-
-You: I am feeling great today!
-
-Querin-GPT1.0: I'm glad to hear that!
-
-You: quit
-
-Querin-GPT1.0: Goodbye! Take care.
+You: Explain artificial intelligence
+Querin-GPT1.0: Fetching Wikipedia summary for 'artificial intelligence'...
+"Artificial intelligence is the simulation of human intelligence processes by machines, especially computer systems."
+```
 
 # Project Structure
-Querin-GPT1.0.py: Main script containing the chatbot logic, including sentiment analysis, news fetching, and Wikipedia summarization.
+**Querin-GPT1.0.py**: Main script containing the chatbot logic, language translation, and external API integrations.
 
-Querin2.0.py: The original version of Querin, without GPT-model.
+**config.json**: Configuration file for storing API keys.
 
-README.md: Documentation for the project.
+**localization.json**: File containing translations for multilingual support.
 
-# Key Components
+**Querin2.0.py**: The original version of Querin, without GPT-model.
 
-GPT-2 Response Generation:
-The chatbot generates responses dynamically using the GPT-2 model. The model is fine-tuned to produce conversational responses and handle questions related to space travel, general information, and more.
+**README.md**: Documentation for the project.
 
-Predefined Patterns for Basic Responses:
-Uses regular expressions to match user input to predefined patterns for personalized, quick responses (e.g., greeting, asking for the bot's name, etc.).
+**backlog**: To do list.
 
-Sentiment Analysis:
-TextBlob is used to analyze the sentiment of the user’s input and provide empathetic or positive responses based on the input's emotional tone.
-
-Fetching News and Wikipedia Information:
-The chatbot fetches the latest news from the BBC using RSS feeds and summarizes articles for users. Additionally, it retrieves and summarizes Wikipedia pages based on user queries.
+**LICENSE**: MIT License
 
 # Future Enhancements
-Some potential enhancements for future versions of Querin-GPT1.0 include:
 
-Adding support for more news sources beyond BBC.
+Voice Interaction: Adding speech recognition and text-to-speech capabilities.
 
-Expanding Wikipedia search capabilities for more accurate and detailed summaries.
+Expanded News Sources: Support for additional RSS feeds.
 
-Enhancing the conversational abilities of the chatbot by integrating additional machine learning models.
+Advanced Context Memory: Enhancing chatbot memory for long-term user interactions.
 
-Allowing for deeper integrations, such as retrieving more structured data or improving memory of past interactions.
+Custom Model Fine-Tuning: Fine-tuning GPT-2 on domain-specific datasets for specialized use cases.
 
 # License
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+This project is licensed under the MIT License - see the **[LICENSE](./LICENSE)** file for details.
 
 

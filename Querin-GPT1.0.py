@@ -23,7 +23,7 @@ tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 tokenizer.pad_token_id = tokenizer.eos_token_id  # Set pad token to eos token
 model = GPT2LMHeadModel.from_pretrained("gpt2")
 
-config_file_path = '/home/ashuredd/Querin/Querin/config.json'
+config_file_path = '/home/utk/Querin/Querin/config.json'
 
 config = {}
 try:
@@ -59,7 +59,7 @@ def translate_text(text: str, target_language: str) -> str:
 def detect_language(text: str) -> str:
     return "en"
 
-def generate_gpt2_response(user_input, max_length=100):
+def generate_gpt2_response(user_input, max_length=250):
     # Tokenize the input
     input_ids = tokenizer.encode(user_input, return_tensors="pt")
     
@@ -195,7 +195,7 @@ def respond_to_sentiment(user_input):
     elif analysis['label'] == '1 star':
         return random.choice(sentiments.get('negative', ["I'm sorry to hear that."]))
     else:
-        return random.choice(sentiments.get('neutral', ["I see."]))
+        return None #random.choice(sentiments.get('neutral', ["I see."]))
 '''
 # Fetch text from a website based on the user's query
 def fetch_from_source(query):
@@ -374,13 +374,17 @@ def chatbot_response(user_input):
     if pattern_response:
         return pattern_response
     
+    if "-gpt" in user_input.lower():
+        user_input = user_input.replace("-gpt", "").strip() 
+        return generate_gpt2_response(user_input)
+
     # Check for sentiment response
     sentiment_response = respond_to_sentiment(user_input)
-    if sentiment_response != "Thanks for sharing that.":  # Default text means no sentiment
+    if sentiment_response:  # Default text means no sentiment
         return sentiment_response
 
     # Generate a GPT-2 response if no patterns or specific responses are matched
-    return generate_gpt2_response(user_input)
+    
 
 # Generate a resource-based response
 '''
@@ -451,6 +455,11 @@ while True:
         print(f"{Style.BRIGHT}{Fore.RED}Querin-GPT1.0:{Style.RESET_ALL}", end=" ")  
     
         # Apply slow typing only to the response
+        slow_typing(response, delay=0.03)
+
+    elif response is None:
+        response = generate_gpt2_response(user_input)
+        print(f"{Style.BRIGHT}{Fore.RED}Querin-GPT1.0:{Style.RESET_ALL}", end=" ")
         slow_typing(response, delay=0.03)
 
     elif is_query(user_input):

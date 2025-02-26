@@ -1,0 +1,9 @@
+nltk
+requests 
+beautifulsoup4 
+textblob 
+transformers 
+torch 
+feedparser 
+colorama 
+translate

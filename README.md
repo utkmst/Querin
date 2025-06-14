@@ -1,4 +1,6 @@
 ![alt text](querin.gif)
+# IMPORTANT
+Now Querin has some fine-tuned models rather than a chatbot, such as [Querin-Chimera Alpha](https://huggingface.co/utkmst/chimera-alpha-test1) and [Querin-Chimera](https://huggingface.co/utkmst/querin-chimera-beta-test2) on [HuggingFace](https://huggingface.co/utkmst). Please check these if you're interested in. Thx!
 
 # Querin🦋
 Querin is a multilingual, Python-based chatbot leveraging OpenAI's GPT-2 model to provide intelligent, conversational interactions. With features like sentiment analysis, real-time weather updates, news retrieval, Wikipedia summaries, and language translation, Querin is a versatile assistant designed to cater to diverse user needs.

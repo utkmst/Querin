@@ -1,4 +1,4 @@
-![alt text](https://camo.githubusercontent.com/f8b934b838ff8ba845ef97135975f8a99c1e19f3d9450893c54a2868d03b9802/68747470733a2f2f692e6962622e636f2f43356e54536e6a2f51756572696e2d6c6f676f2d66697273742d72656d6f766562672e706e67)
+![alt text]([https://camo.githubusercontent.com/f8b934b838ff8ba845ef97135975f8a99c1e19f3d9450893c54a2868d03b9802/68747470733a2f2f692e6962622e636f2f43356e54536e6a2f51756572696e2d6c6f676f2d66697273742d72656d6f766562672e706e67](https://ibb.co/tMzptvZc))
 
 # Querin🦋
 Querin is a multilingual, Python-based chatbot leveraging OpenAI's GPT-2 model to provide intelligent, conversational interactions. With features like sentiment analysis, real-time weather updates, news retrieval, Wikipedia summaries, and language translation, Querin is a versatile assistant designed to cater to diverse user needs.

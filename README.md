@@ -1,4 +1,4 @@
-![alt text]([https://ibb.co/tMzptvZc])
+![alt text](https://ibb.co/tMzptvZc)
 
 # Querin🦋
 Querin is a multilingual, Python-based chatbot leveraging OpenAI's GPT-2 model to provide intelligent, conversational interactions. With features like sentiment analysis, real-time weather updates, news retrieval, Wikipedia summaries, and language translation, Querin is a versatile assistant designed to cater to diverse user needs.
